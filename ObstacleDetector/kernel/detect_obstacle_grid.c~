@@ -1,0 +1,240 @@
+#include "lidar_include.h"
+
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
+void filter_grid(ALV_DATA * alv_data);
+
+void detect_obstacle_grid(ALV_DATA * alv_data)
+{
+	int row, col;
+	int row_max = alv_data->para_table->para_config.grid_map_row;
+	int	col_max = alv_data->para_table->para_config.grid_map_col;
+	int beam, angle;
+	int max_beam = alv_data->para_table->max_beam;
+	HDL_DATA1 * hdl_data = alv_data->hdl_data;
+	HDL_LIDAR_PTS1 * pts;
+	
+	float height_dis;
+
+	int map_rear_range = alv_data->para_table->para_config.map_rear_range;
+	int map_left_range = alv_data->para_table->para_config.map_left_range;
+	int grid_size = alv_data->para_table->para_config.grid_size;
+	int grid_front_row = alv_data->para_table->para_config.grid_front_row;
+	int grid_middle_col = alv_data->para_table->para_config.grid_middle_col;
+	int grid_car_length = alv_data->para_table->para_config.grid_car_length;
+	int grid_car_width = alv_data->para_table->para_config.grid_car_width;
+	int grid_blind_area_front = alv_data->para_table->para_config.grid_blind_area_front;
+	int grid_blind_area_rear = alv_data->para_table->para_config.grid_blind_area_rear;
+	int grid_blind_area_left = alv_data->para_table->para_config.grid_blind_area_left;
+	int grid_blind_area_right = alv_data->para_table->para_config.grid_blind_area_right;
+	int threshold = alv_data->para_table->para_config.obs_threshold;
+	int grid_curb_max_row = CURB_FRONT_MAX / grid_size + grid_front_row;
+
+	GRID1 ** lidar_grids = alv_data->lidar_grids;
+
+	for (row = 0; row < row_max; row++){
+		memset(lidar_grids[row], 0, sizeof(GRID1) * col_max);
+	}
+	
+	for (row = grid_front_row; row < grid_front_row + grid_car_length; row++){
+		for(col = grid_middle_col - grid_car_width / 2; col < grid_middle_col + grid_car_width / 2; col++){
+			lidar_grids[row][col].grid_prop_feature.car_area = 1;
+		}
+	}
+
+	for (row = grid_front_row - grid_blind_area_rear; row < grid_front_row + grid_car_length + grid_blind_area_front; row++){
+		for (col = grid_middle_col - grid_car_width / 2 - grid_blind_area_left; col < grid_middle_col + grid_car_width / 2 + grid_blind_area_right; col++){
+			if (lidar_grids[row][col].grid_prop_feature.car_area != 1){
+				lidar_grids[row][col].grid_prop_feature.blind_area = 1;
+			}
+		}
+	}
+
+	for (beam = 0; beam < max_beam; beam++){
+		for (angle = 0; angle < 4000; angle++){
+			pts = &(hdl_data->ring[beam].pts[angle]);
+			if (pts->valid_flag == 1){
+
+				row = (pts->coor3.y + map_rear_range) / grid_size;
+				col = (pts->coor3.x + map_left_range) / grid_size;
+				
+				if (lidar_grids[row][col].grid_prop_feature.car_area != 1){
+					if (lidar_grids[row][col].grid_prop_feature.known == 0){
+						lidar_grids[row][col].grid_obs_feature.min_height = pts->coor3.z; 
+						lidar_grids[row][col].grid_obs_feature.min_distancexy = pts->dis; 
+						lidar_grids[row][col].grid_obs_feature.min_dis_pt.x = angle;
+						lidar_grids[row][col].grid_obs_feature.min_dis_pt.y = beam;
+						lidar_grids[row][col].grid_obs_feature.max_height = pts->coor3.z;
+						lidar_grids[row][col].grid_obs_feature.max_non_obs_height = pts->coor3.z;
+						lidar_grids[row][col].grid_prop_feature.known = 1;
+					}
+					else{
+						if (lidar_grids[row][col].grid_obs_feature.min_distancexy < pts->dis){
+							lidar_grids[row][col].grid_obs_feature.min_distancexy = pts->dis;
+						}
+						if (pts->coor3.z > lidar_grids[row][col].grid_obs_feature.max_height){
+							lidar_grids[row][col].grid_obs_feature.max_height = pts->coor3.z;
+						}
+						height_dis = pts->coor3.z - lidar_grids[row][col].grid_obs_feature.min_height;
+						if (lidar_grids[row][col].grid_obs_feature.max_height_dis == 0){
+							lidar_grids[row][col].grid_obs_feature.max_height_dis = height_dis;
+						}
+						else if (height_dis > lidar_grids[row][col].grid_obs_feature.max_height_dis){
+							lidar_grids[row][col].grid_obs_feature.max_height_dis = height_dis;
+						}
+						if (height_dis > threshold){
+								lidar_grids[row][col].grid_prop_feature.occupy_flag = 1;
+
+							if (lidar_grids[row][col].grid_obs_feature.obs_num == 0){
+								lidar_grids[row][col].grid_obs_feature.min_obs_height = pts->coor3.z;
+
+								lidar_grids[row][col].grid_obs_feature.grid_max_pts.most_back.x = pts->coor3.x;
+								lidar_grids[row][col].grid_obs_feature.grid_max_pts.most_back.y = pts->coor3.y;
+
+								lidar_grids[row][col].grid_obs_feature.grid_max_pts.most_left.x = pts->coor3.x;
+								lidar_grids[row][col].grid_obs_feature.grid_max_pts.most_left.y = pts->coor3.y;
+
+								lidar_grids[row][col].grid_obs_feature.grid_max_pts.most_front.x = pts->coor3.x;
+								lidar_grids[row][col].grid_obs_feature.grid_max_pts.most_front.y = pts->coor3.y;
+
+								lidar_grids[row][col].grid_obs_feature.grid_max_pts.most_right.x = pts->coor3.x;
+								lidar_grids[row][col].grid_obs_feature.grid_max_pts.most_right.y = pts->coor3.y;
+							}
+							else {
+								if (height_dis < lidar_grids[row][col].grid_obs_feature.max_height_dis){
+									lidar_grids[row][col].grid_obs_feature.max_height_dis = height_dis;
+								}
+
+								if (pts->coor3.x < lidar_grids[row][col].grid_obs_feature.grid_max_pts.most_left.x){
+								lidar_grids[row][col].grid_obs_feature.grid_max_pts.most_left.x = pts->coor3.x;
+								lidar_grids[row][col].grid_obs_feature.grid_max_pts.most_left.y = pts->coor3.y;
+								}
+								if (pts->coor3.y < lidar_grids[row][col].grid_obs_feature.grid_max_pts.most_back.y){
+									lidar_grids[row][col].grid_obs_feature.grid_max_pts.most_back.x = pts->coor3.x;
+									lidar_grids[row][col].grid_obs_feature.grid_max_pts.most_back.y = pts->coor3.y;
+								}
+								if (pts->coor3.x > lidar_grids[row][col].grid_obs_feature.grid_max_pts.most_right.y){
+									lidar_grids[row][col].grid_obs_feature.grid_max_pts.most_right.x = pts->coor3.x;
+									lidar_grids[row][col].grid_obs_feature.grid_max_pts.most_right.y = pts->coor3.y;
+								}
+								if (pts->coor3.y > lidar_grids[row][col].grid_obs_feature.grid_max_pts.most_front.y){
+									lidar_grids[row][col].grid_obs_feature.grid_max_pts.most_front.x = pts->coor3.x;
+									lidar_grids[row][col].grid_obs_feature.grid_max_pts.most_front.y = pts->coor3.y;
+								}
+							}
+							lidar_grids[row][col].grid_obs_feature.obs_num++;
+						}
+						else{
+							lidar_grids[row][col].grid_obs_feature.max_non_obs_height = pts->coor3.z;
+						}
+							if(alv_data->para_table->para_config.environment_state == RURAL)
+						{
+							if(height_dis >= threshold-14 && lidar_grids[row][col].grid_obs_feature.min_height<-30 &&row>80&& row<200)
+							{
+								lidar_grids[row][col].grid_prop_feature.occupy_flag = 1;
+								lidar_grids[row][col].grid_obs_feature.negative = 1;
+								lidar_grids[row][col].grid_obs_feature.obs_num ++;
+							}
+						}
+					}
+				}
+
+			}
+		}
+	}
+	filter_grid(alv_data);
+
+}
+
+void filter_grid(ALV_DATA * alv_data)
+{
+	int row, col;
+	int row_max = alv_data->para_table->para_config.grid_map_row;
+	int	col_max = alv_data->para_table->para_config.grid_map_col;
+	int grid_size = alv_data->para_table->para_config.grid_size;
+
+	int grid_near_front = MAP_NEAR_FRONT / grid_size + alv_data->para_table->para_config.grid_front_row;
+	GRID1 ** lidar_grids = alv_data->lidar_grids;
+	//HDL_DATA1 * hdl_data = alv_data->hdl_data;
+	//float * ring_distance = alv_data->para_table->ring_distance;
+
+	float height_dis;
+    int grid_front_row = alv_data->para_table->para_config.grid_front_row;
+	int grid_curb_max_row = CURB_FRONT_MAX / grid_size + grid_front_row;
+	//int beam, angle, angle_ring_before, angle_ring_after;
+	//float ring_dis, ring;
+
+
+	for (row = 0; row < row_max; row++){
+		for (col = 0; col < col_max; col++){
+			if (lidar_grids[row][col].grid_prop_feature.car_area == 1){
+				lidar_grids[row][col].grid_prop_feature.curb_flag = 0;
+				lidar_grids[row][col].grid_prop_feature.occupy_flag = 0;
+			}
+			if (lidar_grids[row][col].grid_prop_feature.blind_area == 1){
+				if (lidar_grids[row][col].grid_obs_feature.max_height > 70){
+					lidar_grids[row][col].grid_prop_feature.occupy_flag = 1;
+				}
+			}
+			height_dis = lidar_grids[row][col].grid_obs_feature.max_height_dis;
+			if(alv_data->para_table->para_config.environment_state == URBAN){  //only urban use curb
+				if (height_dis < CURB_DIS_MAX && height_dis > CURB_DIS_MIN && row < grid_curb_max_row){
+					if (lidar_grids[row][col].grid_prop_feature.occupy_flag != 1){
+						lidar_grids[row][col].grid_prop_feature.curb_flag = 1;
+					}
+				}
+			}	
+
+			if (lidar_grids[row][col].grid_prop_feature.occupy_flag == 1){
+				if (lidar_grids[row][col].grid_obs_feature.min_obs_height > 200){
+					lidar_grids[row][col].grid_prop_feature.occupy_flag = 0;
+				}
+					if (row < grid_near_front){
+					if (lidar_grids[row][col].grid_obs_feature.obs_num < 3){
+						lidar_grids[row][col].grid_prop_feature.occupy_flag = 0;
+					}
+					}
+				
+			}
+			/*if (row > grid_ring_detect){
+				if (lidar_grids[row][col].grid_prop_feature.occupy_flag == 0 && lidar_grids[row][col].grid_prop_feature.known == 1){
+					beam = lidar_grids[row][col].grid_obs_feature.min_dis_pt.y;
+					angle = lidar_grids[row][col].grid_obs_feature.min_dis_pt.x;
+					ring = lidar_grids[row][col].grid_obs_feature.min_distancexy;
+
+					angle_ring_before = (angle + 3999) % 4000;
+					angle_ring_after = (angle + 4001) % 4000;
+					
+					if (beam > 35){
+						if (hdl_data->ring[beam - 1].pts[angle_ring_before].valid_flag == 1){
+							ring_dis = ring - hdl_data->ring[beam - 1].pts[angle_ring_before].dis;
+							if (ring_dis < ring_distance[beam] * RING_OBSTACLE_RATIO){
+								lidar_grids[row][col].grid_prop_feature.occupy_flag = 1;
+							}
+						}
+						else if (hdl_data->ring[beam - 1].pts[angle].valid_flag == 1){
+							ring_dis = ring - hdl_data->ring[beam - 1].pts[angle].dis;
+							if (ring_dis < ring_distance[beam] * RING_OBSTACLE_RATIO){
+								lidar_grids[row][col].grid_prop_feature.occupy_flag = 1;
+							}
+						}
+						else if (hdl_data->ring[beam - 1].pts[angle_ring_after].valid_flag == 1){
+							ring_dis = ring - hdl_data->ring[beam - 1].pts[angle_ring_after].dis;
+							if (ring_dis < ring_distance[beam] * RING_OBSTACLE_RATIO){
+								lidar_grids[row][col].grid_prop_feature.occupy_flag = 1;
+							}
+						}
+					}
+					
+				}
+			}*/
+		}
+	}
+}
+
+#ifdef __cplusplus
+}
+#endif
