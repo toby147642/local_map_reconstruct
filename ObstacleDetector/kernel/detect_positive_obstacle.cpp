@@ -1,6 +1,6 @@
-/* Created  :   Linhui
- * Date     :   2016-08-05
- * Usage    :
+/* Created  :   Ye Yuwen
+ * Date     :   2018-09-21
+ * Usage    :   definition of positive obstacle detector class
 */
 #include "detect_positive_obstacle.h"
 #include <opencv/cv.h>
@@ -137,8 +137,6 @@ void POSITIVE_DETECTOR::retrieve_pos(ALV_DATA *alv_data){
                 // find the min_height for each contour (thought to be ground)
                 if (lidar_grids[row][col].min_height < min_height[i])
                     min_height[i] = lidar_grids[row][col].min_height;
-//                if (obs_ft.real_min_height < real_min_height[i])
-//                    real_min_height[i] = obs_ft.real_min_height;
                 if (lidar_grids[row][col].max_height > max_height[i])
                     max_height[i] = lidar_grids[row][col].max_height;
                 if (lidar_grids[row][col].dis_height > max_height_dis[i])
@@ -431,76 +429,7 @@ void POSITIVE_DETECTOR::remove_suspended_obs(ALV_DATA *alv_data) // 滤除悬空
 }
 
 
-void POSITIVE_DETECTOR::classify_occlusion_grid(ALV_DATA *alv_data)
-{
-    const int *angle_grid_num = alv_data->para_table.polar_table.angle_grid_num;
-    PIXEL **polar_table = alv_data->para_table.polar_table.table;
-    GRID **grids = alv_data->grid_map.grids;
-    int Rows = alv_data->para_table.grid_rows;
-    int Cols = alv_data->para_table.grid_cols;
-    const float lidar_height = alv_data->para_table.lidar32_expara.T[2];
 
-    // occulusion
-    for(int angle_cnt = 0; angle_cnt < POLAR_ANGLE_NUM; angle_cnt++){
-        int grid_shadowtop = 0;
-        //statistic from the fifth polar_grid
-        for (int i = 5; i < angle_grid_num[angle_cnt]-1; i++){
-            int row = polar_table[angle_cnt][i].row;
-            int col = polar_table[angle_cnt][i].col;
-
-            if (grids[row][col].attribute == GRID_POS_OBS || grids[row][col].attribute == GRID_RETRIEVED_POS){
-                //calculate shadow top and update
-                int grid_height = grids[row][col].max_height;
-                int top;
-                if(lidar_height > grid_height)
-                    top = (int)((lidar_height * i) / (lidar_height - grid_height)); //calculate the farest position, cm
-                else
-                    top = angle_grid_num[angle_cnt];    //shadow is the farest point
-                if (top > grid_shadowtop)
-                    grid_shadowtop = top;
-            }
-            else if(i <= grid_shadowtop && (grids[row][col].attribute== GRID_TRAVESABLE
-                                            ||grids[row][col].attribute ==GRID_UNKNOWN
-                                            ||grids[row][col].attribute ==GRID_SHADOW))
-                grids[row][col].attribute = GRID_OCCULUSION;
-        }
-    }
-}
-
-
-void POSITIVE_DETECTOR::classify_neg_occlusion_grid(ALV_DATA *alv_data)
-{
-    const int *angle_grid_num = alv_data->para_table.polar_table.angle_grid_num;
-    PIXEL **polar_table = alv_data->para_table.polar_table.table;
-    GRID **grids = alv_data->grid_map.grids;
-    int Rows = alv_data->para_table.grid_rows;
-    int Cols = alv_data->para_table.grid_cols;
-    const float lidar_height = alv_data->para_table.lidar32_expara.T[2];
-
-    // occulusion
-    for(int angle_cnt = 0; angle_cnt < POLAR_ANGLE_NUM; angle_cnt++){
-        //statistic from the fifth polar_grid
-        for (int i = 5; i < angle_grid_num[angle_cnt]-1; i++){
-            int row = polar_table[angle_cnt][i].row;
-            int col = polar_table[angle_cnt][i].col;
-
-            if (grids[row][col].attribute == GRID_NEG_OBS){
-                //calculate shadow top and update
-                int grid_height = abs(grids[row][col].min_height);
-                int top;
-                if(lidar_height > grid_height)
-                    top = (int)((grid_height * i) / (lidar_height + grid_height)); //calculate the farest position, cm
-                if(top>=i)
-                    continue;
-                for(int j=i; j>=top; j--){
-                    grids[row][col].attribute = GRID_NEG_OBS;
-                }
-
-            }
-
-        }
-    }
-}
 
 void POSITIVE_DETECTOR::classify_shadow_grid(ALV_DATA *alv_data)
 {
@@ -600,10 +529,6 @@ void POSITIVE_DETECTOR::filt_dangerous(ALV_DATA *alv_data)
         }
     }
 
-//    flip(dangerous, dangerous, 0);
-//    imshow("dangerous", dangerous);
-//    waitKey(1);
-
     // find contours
     vector<vector<Point> > contours;
     findContours(dangerous, contours, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_SIMPLE);
@@ -646,14 +571,6 @@ void POSITIVE_DETECTOR::filt_dangerous(ALV_DATA *alv_data)
         }
     }
 
-//    // 将被抹掉的非危险区域重新填入
-//    for(row = 0; row < row_max; row ++){
-//        for(col = 0; col < col_max; col ++){
-//            if(known[row][col] != 4)
-//                lidar_grids[row][col].grid_prop_feature.known = known[row][col];
-//        }
-//    }
-
     // free memory
     for(int i=0; i<Rows; i++)
         delete[] known[i];
@@ -692,9 +609,6 @@ void POSITIVE_DETECTOR::detect_obstacle_grid(ALV_DATA *alv_data)
 {
     mark_car_area(alv_data);
     update_grids(alv_data, (const alv_Point3f**)alv_data->lidar32_pointcloud, HDL32_BEAM_NUM, HDL32_BEAM_POINTSIZE);
-//    update_grids(alv_data, (const alv_Point3f**)alv_data->lidar16_pointcloud_L, VLP16_BEAM_NUM, VLP16_BEAM_POINTSIZE);
-//    update_grids(alv_data, (const alv_Point3f**)alv_data->lidar16_pointcloud_R, VLP16_BEAM_NUM, VLP16_BEAM_POINTSIZE);
-//    update_grids(alv_data, (const alv_Point3f**)alv_data->lidar4_pointcloud, LIDAR4_BEAM_NUM, LIDAR4_BEAM_POINTSIZE);
 
     GRID **grids = alv_data->grid_map.grids;
     int Rows = alv_data->para_table.grid_rows;
@@ -714,23 +628,11 @@ void POSITIVE_DETECTOR::detect_obstacle_grid(ALV_DATA *alv_data)
                    && col <= alv_data->para_table.grid_center_col+7
                    && grids[row][col].dis_height < alv_data->para_table.near_obstacle_threshold)
                     grids[row][col].attribute = GRID_TRAVESABLE;
-            }/*else if(grids[row][col].dis_height >= alv_data->para_table.neg_obs_threshold){
-                grids[row][col].attribute = GRID_NEG_OBS;
-                if(row>=alv_data->para_table.grid_center_row
-                   && row <= alv_data->para_table.grid_center_row+7
-                   && col >= alv_data->para_table.grid_center_col-7
-                   && col <= alv_data->para_table.grid_center_col+7
-                   && grids[row][col].dis_height < alv_data->para_table.near_obstacle_threshold)
-                    grids[row][col].attribute = GRID_TRAVESABLE;
-            }*/
+            }
             else
                 grids[row][col].attribute = GRID_TRAVESABLE;
         }
     }
-
-//#ifndef OFF_LINE
-//    process_lidar1_data(alv_data);
-//#endif
 
     // single point filter
     // can't detect the neg is largely because of this
@@ -780,395 +682,14 @@ void POSITIVE_DETECTOR::detect_water_surface(ALV_DATA *alv_data)
     }
 }
 
-void POSITIVE_DETECTOR::retrieve_neg(ALV_DATA *alv_data){
-    GRID **grids = alv_data->grid_map.grids;
-    int Rows = alv_data->para_table.grid_rows;
-    int Cols = alv_data->para_table.grid_cols;
-    const PARA_TABLE &para = alv_data->para_table;// alv_data->para_table包含了指针申请的动态内存，所以要么用引用的形式，要么自定义=重载，否则形参析构时会将实参的动态内存释放掉！！！
-
-    int win = 2;
-    int ths = 2;
-
-    // retrieve neg from pos+neg
-    for(int row=win; row<Rows-win; row++){
-        for(int col=win; col<Cols-win; col++){
-            if(grids[row][col].attribute != GRID_POS_OBS)
-                continue;
-
-            int cnt;
-            // too high filter
-            cnt= 0;
-            float ave_arround_max_height = 0.0;
-            for(int i=row-win; i<=row+win; i++){
-                for(int j=col-win; j<=col+win; j++){
-                    if(!grids[i][j].known ||
-                            (i==row && j==col)||
-                            grids[i][j].attribute == GRID_RETRIEVED_POS ||
-                            grids[i][j].attribute == GRID_SUSPEND_OBS ||
-                            grids[i][j].attribute == GRID_SHADOW ||
-                            grids[i][j].attribute == GRID_POS_OBS)
-                        continue;
-                    cnt++;
-                    ave_arround_max_height +=grids[i][j].max_height;
-                }
-            }
-            if(cnt!=0){
-                if(grids[row][col].dis_height > alv_data->para_table.pos_obs_threshold)
-                    continue;
-                if(grids[row][col].max_height-ave_arround_max_height/cnt>alv_data->para_table.pos_obs_threshold)
-                    continue;
-            }
-
-
-            // neg retrieve
-            cnt= 0;
-            float ave_arround_min_height = 0.0;
-            for(int i=row-win; i<=row+win; i++){
-                for(int j=col-win; j<=col+win; j++){
-                    if(!grids[i][j].known ||
-                            (i==row && j==col)||
-                            grids[i][j].attribute == GRID_RETRIEVED_POS ||
-                            grids[i][j].attribute == GRID_SHADOW ||
-                            grids[i][j].attribute == GRID_POS_OBS)
-                        continue;
-                    cnt++;
-                    ave_arround_min_height +=grids[i][j].min_height;
-                }
-            }
-            if(cnt!=0){
-                ave_arround_min_height/=cnt;
-                int dis2car = sqrt(pow((double)row-para.grid_center_row,2)+pow((double)col-para.grid_center_col,2))*para.grid_size;
-                if(grids[row][col].min_height-ave_arround_min_height<NEG_THS && dis2car < 1000)
-                    grids[row][col].attribute = GRID_NEG_OBS;
-                    int aaa = 1;
-            }
-        }
-    }
-
-    // retrieve pos from neg
-    for(int row=win; row<=Rows-win; row++){
-        for(int col=win; col<=Cols-win; col++){
-            int neig = 0;
-            // neg->pos because of wrong
-            if(grids[row][col].attribute != GRID_NEG_OBS)
-                continue;
-
-            for(int i=row-win; i<=row+win; i++){
-                for(int j=col-win; j<=col+win; j++){
-                    if(!grids[i][j].known ||(i==row && j==col))
-                        continue;
-                    if(grids[i][j].attribute == GRID_POS_OBS ||
-                            grids[i][j].attribute == GRID_RETRIEVED_POS ||
-                            grids[i][j].attribute == GRID_SUSPEND_OBS ||
-                            grids[i][j].attribute == GRID_SHADOW)
-                        neig++;
-                }
-            }
-
-            if(neig > ths || grids[row][col].far_dis >1200)
-                grids[row][col].attribute = GRID_POS_OBS;
-
-        }
-    }
-}
-
-
-//  couldn't work
-void POSITIVE_DETECTOR::expand_neg(ALV_DATA *alv_data, const alv_Point3f **pointcloud, const int BEAM_POINTSIZE){
-    const int *angle_grid_num = alv_data->para_table.polar_table.angle_grid_num;
-    PIXEL **polar_table = alv_data->para_table.polar_table.table;
-    GRID **grids = alv_data->grid_map.grids;
-    int Rows = alv_data->para_table.grid_rows;
-    const PARA_TABLE &para = alv_data->para_table;
-    int Cols = alv_data->para_table.grid_cols;
-
-
-    bool flag1 = false;
-    bool flag2 = false;
-    for(int row=0; row<Rows; row++){
-        for(int col=0; col<Cols; col++){
-            if(grids[row][col].attribute != GRID_NEG_OBS)
-                continue;
-//            bool flag_neg = false;
-
-            int row_begin1 = -1;
-            int col_begin1 = -1;
-            int row_begin2 = -1;
-            int col_begin2 = -1;
-            int row_end1 = -1;
-            int col_end1 = -1;
-            int row_end2 = -1;
-            int col_end2 = -1;
-            if(grids[row][col].beam_min ==-1 && grids[row][col].beam_max ==-1)
-                continue;
-            int beam_now = grids[row][col].beam_min ==-1 ? grids[row][col].beam_max:grids[row][col].beam_min;
-//            cout <<endl;
-//            cout << beam_now <<endl;
-
-            for(int cnt = 0; cnt < BEAM_POINTSIZE-2; cnt++){
-                const alv_Point3f *pt = (alv_Point3f *)pointcloud + alv_data->para_table.lidar32_inpara.beam_order[beam_now]*BEAM_POINTSIZE+cnt;
-//                cout <<endl;
-//                cout<<grids[row][col].beam_min<<"   "<<alv_data->para_table.lidar32_inpara.beam_order[grids[row][col].beam_min]<<endl;
-                if(!pt->valid)
-                    continue;
-                int _row = (pt->y + para.map_range_rear)/para.grid_size;
-                int _col = (pt->x + para.map_range_left)/para.grid_size;
-                if(_row<0 || _row>=Rows || _col<=0||_col>=Cols)
-                    continue;
-                int row_next = -1;
-                int col_next = -1;
-
-                const alv_Point3f *pt_next = nullptr;
-                for(int cnt_next = cnt+1; cnt_next<BEAM_POINTSIZE;cnt_next++){
-                    pt_next = (alv_Point3f *)pointcloud + alv_data->para_table.lidar32_inpara.beam_order[beam_now]*BEAM_POINTSIZE+cnt_next;
-                    if(!pt_next->valid)
-                        continue;
-                    row_next = (pt_next->y + para.map_range_rear)/para.grid_size;
-                    col_next = (pt_next->x + para.map_range_left)/para.grid_size;
-                    if(row_next<0 || row_next>=Rows || col_next<0||col_next>=Cols)
-                        continue;
-                    break;
-                }
-
-//                cout << _row<< "  "<< _col << " "<<row_next<<" "<< col_next<<endl;
-                if(row_next<0 || row_next>=Rows || col_next<0||col_next>=Cols)
-                    continue;
-                if(grids[_row][_col].attribute != GRID_NEG_OBS && grids[row_next][col_next].attribute == GRID_NEG_OBS ){
-                    row_begin1 = _row;
-                    col_begin1 = _col;
-                    row_begin2 = row_next;
-                    col_begin2 = col_next;
-                    flag1 = true;
-
-                }else if(grids[_row][_col].attribute == GRID_NEG_OBS && grids[row_next][col_next].attribute != GRID_NEG_OBS ){
-                    row_end1 = row_next;
-                    col_end1 = col_next;
-                    row_end2 = _row;
-                    col_end2 = _col;
-                    flag2 = true;
-                }
-            }
-
-            if(flag1&&flag2){
-                flag1 = false;
-                flag2 = false;
-                int start_row = min(row_begin1, min(row_begin2, min(row_end1,row_end2)));
-                int start_col = min(col_begin1, min(col_begin2, min(col_end1,col_end2)));
-                int end_row = max(row_begin1, max(row_begin2, max(row_end1,row_end2)));
-                int end_col = max(col_begin1, max(col_begin2, max(col_end1,col_end2)));
-                cout << start_row <<"   "<<start_col<<"   "<<end_row<<"   "<<end_col<<endl;
-
-                if(start_row<0 || start_col<0 ||end_row<0||end_col<0)
-                    continue;
-                for(int i=start_row;i<end_row;i++){
-                    for(int j=start_col;j<end_col;j++){
-                        grids[i][j].attribute = GRID_NEG_OBS;
-                    }
-                }
-            }
-        }
-    }
-}
-
-void POSITIVE_DETECTOR::filterWeeds(ALV_DATA *alv_data){
-    GRID **grids = alv_data->grid_map.grids;
-    int Rows = alv_data->para_table.grid_rows;
-    int Cols = alv_data->para_table.grid_cols;
-    for(int row = 0; row < Rows; row++)
-    {
-        for(int col = 0; col < Cols; col++)
-        {
-            if( !grids[row][col].known ||
-                    grids[row][col].attribute != GRID_POS_OBS||
-                    grids[row][col].attribute != GRID_RETRIEVED_POS||
-                    //grids[row][col].attribute != GRID_NEG_OBS||
-                    grids[row][col].attribute != GRID_NEG_OBS )
-                continue;
-            if(grids[row][col].dis_height <= alv_data->para_table.pos_obs_threshold)        //dis_height higher than threshold
-            {
-                grids[row][col].attribute = GRID_TRAVESABLE;
-//                if(row>=alv_data->para_table.grid_center_row
-//                   && row <= alv_data->para_table.grid_center_row+7
-//                   && col >= alv_data->para_table.grid_center_col-7
-//                   && col <= alv_data->para_table.grid_center_col+7
-//                   && grids[row][col].dis_height < alv_data->para_table.near_obstacle_threshold)
-//                    grids[row][col].attribute = GRID_TRAVESABLE;
-            }
-            /*else
-                grids[row][col].attribute = GRID_TRAVESABLE;*/
-        }
-    }
-    filt_grid(alv_data, 1, 1);
-}
-
-void POSITIVE_DETECTOR::stdevWeeds(ALV_DATA *alv_data){
-    int rows = alv_data->para_table.grid_rows;
-    int cols = alv_data->para_table.grid_cols;
-    GRID ** grids = alv_data->grid_map.grids;
-    for(int row=0; row<rows; row++){
-        for(int col=0; col<cols; col++){
-            if( !grids[row][col].known ||
-                    grids[row][col].attribute != GRID_POS_OBS ||
-                    grids[row][col].attribute != GRID_RETRIEVED_POS ||
-                    //grids[row][col].attribute != GRID_NEG_OBS ||
-                    grids[row][col].attribute != GRID_NEG_OBS )
-                continue;
-            if(grids[row][col].stdev_x > x_stdev_ths &&
-                    grids[row][col].stdev_y > y_stdev_ths &&
-                    grids[row][col].stdev_z > z_stdev_ths){
-                // it is weed grid, to distinguish
-                // threshold is waiting for confine
-                grids[row][col].attribute = GRID_FALLING_NEG_EDGE;
-            }
-        }
-    }
-    // if weed grid neighbor has enough pos+neg+retri+fall_neg_edge, it's pos; else it is traversable
-    int win = 1;
-    int neig = 3;
-    for(int i=win; i < rows - win; i++){
-        for(int j=win; j < cols - win; j++){
-            if( !grids[i][j].known ||
-                    grids[i][j].attribute != GRID_FALLING_NEG_EDGE)
-                continue;
-            int cnt_neig = 0;
-            for(int row = i - win; row <= i + win; row++){
-                for(int col = j - win; col <= j + win; col++){
-                    if((i==row && j==col) ||
-                            grids[row][col].attribute != GRID_POS_OBS &&
-                            grids[row][col].attribute != GRID_NEG_OBS &&
-                            grids[row][col].attribute != GRID_RETRIEVED_POS &&
-                            grids[row][col].attribute != GRID_FALLING_NEG_EDGE)
-                        continue;
-                    cnt_neig ++;
-                }
-            }
-            if(cnt_neig >= neig)
-                grids[i][j].attribute = GRID_POS_OBS;
-            else grids[i][j].attribute = GRID_TRAVESABLE;
-
-        }
-    }
-}
-
-void POSITIVE_DETECTOR::expand_pos(ALV_DATA *alv_data){
-    GRID **grids = alv_data->grid_map.grids;
-    int Rows = alv_data->para_table.grid_rows;
-    int Cols = alv_data->para_table.grid_cols;
-
-    int win = 3;
-
-    for(int row = win; row < Rows-win;  row++){
-        for(int col = win; col < Cols-win; col++){
-
-            if(grids[row][col].attribute != GRID_NEG_OBS)
-                continue;
-
-            if(row == 59){
-                for(int j = col-1; j>=col-win; j--){
-                    if(
-                            grids[row][j].attribute == GRID_UNKNOWN ||
-                            !grids[row][j].known ||
-                            grids[row][j].attribute == GRID_TRAVESABLE ||
-                            grids[row][j].attribute == GRID_SUSPEND_OBS ||
-                            grids[row][j].attribute == GRID_CANDIDAT_NEG ||
-                            grids[row][j].attribute == GRID_ROAD_EDGE  ||
-                            grids[row][j].attribute == GRID_SHADOW
-                            )
-                        grids[row][j].attribute = GRID_FALLING_NEG_EDGE;
-                }
-            }
-            else if(col == 79 && row <59){
-                for(int j=row; j<=row+win;j++){
-                    if(grids[j][col].attribute == GRID_UNKNOWN ||
-                            !grids[j][col].known ||
-                            grids[j][col].attribute == GRID_TRAVESABLE ||
-                            grids[j][col].attribute == GRID_SUSPEND_OBS ||
-                            grids[j][col].attribute == GRID_CANDIDAT_NEG ||
-                            grids[j][col].attribute == GRID_ROAD_EDGE  ||
-                            grids[j][col].attribute == GRID_SHADOW
-                            )
-                        grids[j][col].attribute = GRID_FALLING_NEG_EDGE;
-                }
-            }
-            else if(col == 79 && row >59){
-                for(int j=row; j>=row-win;j--){
-                    if(grids[j][col].attribute == GRID_UNKNOWN ||
-                            !grids[j][col].known ||
-                            grids[j][col].attribute == GRID_TRAVESABLE ||
-                            grids[j][col].attribute == GRID_SUSPEND_OBS ||
-                            grids[j][col].attribute == GRID_CANDIDAT_NEG ||
-                            grids[j][col].attribute == GRID_ROAD_EDGE  ||
-                            grids[j][col].attribute == GRID_SHADOW
-                            )
-                        grids[j][col].attribute = GRID_FALLING_NEG_EDGE;
-                }
-            }
-            else{
-                // begining
-                for(int i=row-win; i<=row+win; i++){
-                    for(int j=col-win; j<=col+win ;j++){
-                        if(i==row && j==col)
-                            continue;
-                        if(abs(i-59)+abs(j-79) > abs(row-59)+abs(col-79))
-                            continue;
-
-                        if(i == row){
-                            if(  (1.0*row-i)*(1.0*col-79)/((1.0*col-j)*(1.0*row-50))<=1.25 &&
-                                 (1.0*row-i)*(1.0*col-79)/((1.0*col-j)*(1.0*row-50))>=0.8 &&
-                                   ( grids[i][j].attribute == GRID_UNKNOWN ||
-                                    !grids[i][j].known ||
-                                    grids[i][j].attribute == GRID_TRAVESABLE ||
-                                    grids[i][j].attribute == GRID_SUSPEND_OBS ||
-                                     grids[i][j].attribute == GRID_CANDIDAT_NEG ||
-                                     grids[i][j].attribute == GRID_ROAD_EDGE  ||
-                                     grids[i][j].attribute == GRID_SHADOW
-                                     )
-                                    )
-                                grids[i][j].attribute = GRID_FALLING_NEG_EDGE;
-                        }else{
-                            float flop = (1.0*col-j)*(1.0*row-50)/((1.0*row-i)*(1.0*col-79));
-                            if( flop <=1.25 && flop >= 0.8 &&
-                                ( grids[i][j].attribute == GRID_UNKNOWN ||
-                                 !grids[i][j].known ||
-                                 grids[i][j].attribute == GRID_TRAVESABLE ||
-                                 grids[i][j].attribute == GRID_SUSPEND_OBS ||
-                                  grids[i][j].attribute == GRID_CANDIDAT_NEG ||
-                                  grids[i][j].attribute == GRID_ROAD_EDGE  ||
-                                  grids[i][j].attribute == GRID_SHADOW
-                                  )
-                                    )
-                                grids[i][j].attribute = GRID_FALLING_NEG_EDGE;
-                        }
-    //ending
-
-                    }
-                }
-            }
-        }
-    }
-
-}
-
 /* 正障碍检测 */
 void POSITIVE_DETECTOR::detect(ALV_DATA *alv_data)
 {
     detect_obstacle_grid(alv_data);	// 标记出障碍物栅格、车体范围
     detect_water_surface(alv_data);
     remove_suspended_obs(alv_data);	// 标记悬空障碍物
-
-
-    //continue!!!
-    // because of occlusion is traversable
     classify_shadow_grid(alv_data);// 标记阴影区、危险区域
     retrieve_pos(alv_data);
     classify_dangerous_grid(alv_data);// 标记阴影区、危险区域
-    retrieve_neg(alv_data);
-    expand_pos(alv_data);
-//    classify_neg_occlusion_grid(alv_data);// 标记阴影区、危险区域
-//    expand_neg(alv_data, (const alv_Point3f**)alv_data->lidar32_pointcloud, HDL32_BEAM_POINTSIZE);
-//    contour_filter(alv_data);
-    // filterWeeds(alv_data);
-//    stdevWeeds(alv_data);
-    // classify_occlusion_grid(alv_data);// 标记阴影区、危险区域
-//    retrieve_pos(alv_data);
+
 }

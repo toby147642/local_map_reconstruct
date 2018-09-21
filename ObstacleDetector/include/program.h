@@ -1,5 +1,5 @@
-/* Created  :   Linhui
- * Date     :   2016-05-17
+/* Created  :   Ye Yuwen
+ * Date     :   2018-09-21
  * Usage    :   Definition of some program parameters, such as lidar parser mode,
  *              etc.
 */

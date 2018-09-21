@@ -23,7 +23,6 @@
 #include <opencv2/highgui/highgui.hpp>
 #include "alv_data.h"
 #include "detect_positive_obstacle.h"
-//#include "detect_negative_obstacle.h"
 #include "program.h"
 #include "negativeobstacle.h"
 //#define SAVE_PTS_FILE
@@ -137,7 +136,7 @@ int main()
 
     // read file name index
     string base_dir = "/home/yyw/dataSet_0809";
-    string folder = "0809_1645"; // 0809_1524 0809_1536/ 0809_1538/ 0809_1551 0809_1618 0809_1640/ 0809_1641/ 0809_1645/ 0913_0000
+    string folder = "0809_1640"; // 0809_1524 0809_1536/ 0809_1538/ 0809_1551 0809_1618 0809_1640/ 0809_1641/ 0809_1645/ 0913_0000
     string HDL32Dir = base_dir+"/LIDAR32_DATA/"+folder;
     DIR *dir;
     struct dirent *ptr;
@@ -210,7 +209,7 @@ int main()
 
         // process
         positive_detector->detect(alv_data);
-        //negative_detector->detect(alv_data);
+        negative_detector->detect(alv_data);
 
         // save my data
 

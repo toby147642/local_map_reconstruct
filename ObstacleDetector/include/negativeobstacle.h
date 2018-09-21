@@ -1,3 +1,8 @@
+/* Created  :   Ye Yuwen
+ * Date     :   2018-09-21
+ * Usage    :   define detect negative obstacle class
+*/
+
 #ifndef NEGATIVEOBSTACLE_H
 #define NEGATIVEOBSTACLE_H
 
@@ -10,7 +15,8 @@ static const int NEG_DENSE_THS = 1;
 static const int NEG_Z_CM = 10;
 static const int BEGIN_BEAM = 4;
 static const int END_BEAM = 12;
-
+static const float NEG_PT_NUM = 5;
+static const int NEG_THS = -5;
 
 class negativeObstacle
 {
@@ -32,7 +38,9 @@ public:
     void reflect(ALV_DATA *alv_data);
     void maxWindowFilter(const alv_Point3f **pointcloud, alv_Point3f **max_pointcloud, const int BEAM_NUM, const int BEAM_POINTSIZE);
     void diff_beam_dis(ALV_DATA *alv_data);
-    //    void morphCluster(alv_data);
+    void neg_complete(ALV_DATA *alv_data);
+    void classify_occlusion_grid(ALV_DATA *alv_data);
+    void retrieve_neg(ALV_DATA *alv_data);
 
 private:
     negativeObstacle();

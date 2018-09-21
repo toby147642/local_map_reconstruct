@@ -1,6 +1,7 @@
-/* Created  :   Linhui
- * Date     :   2016-05-17
- * Usage    :   Definition of member function of class ALV_DATA
+/* Created  :   Ye Yuwen
+ * Date     :   2018-09-21
+ * Usage    :   Declaration of ALV_DATA class, which deals with data parsing
+ *              and data cleanup operation.
 */
 #include "alv_data.h"
 #include "program.h"
@@ -16,7 +17,6 @@
 #include <cctype>
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
-//#include "detect_negative_obstacle.h"
 using namespace std;
 using namespace cv;
 /* alv_Point3f
@@ -424,13 +424,6 @@ bool ALV_DATA::init_lidar32_para()
 
     for(int i=1; i<HDL32_BEAM_NUM; i++)
         para_table.diff_abs_dis[i] = para_table.abs_dis[i] - para_table.abs_dis[i-1];
-
-    // cout << "begin" <<endl;
-    // for(int i=0; i<HDL32_BEAM_NUM; i++){
-    //     cout << "beam: " << i <<endl;
-    //     cout << para_table.abs_dis[i]<<endl;
-    //     cout << para_table.diff_abs_dis[i]<<endl;
-    // }
     return true;
 }
 
@@ -486,20 +479,6 @@ void ALV_DATA::maxWindowFilter(){
                 continue;
 
             if(pt1->distance > pt2->distance && pt1->distance > pt3->distance){
-//                pt_tmp -> angleH = pt1 ->angleH;
-//                pt_tmp -> angleV = pt1 ->angleV;
-//                pt_tmp -> x = pt1 -> x;
-//                pt_tmp -> y = pt1 -> y;
-//                pt_tmp -> z = pt1 -> z;
-//                pt_tmp -> valid = pt1 -> valid;
-//                pt_tmp -> intensity = pt1 -> intensity;
-//                pt_tmp -> distance = pt1 -> distance;
-//                pt_tmp -> flatness = pt1 -> flatness;
-//                pt_tmp -> sub_flatness = pt1 -> sub_flatness;
-//                pt_tmp -> neighbor_dis = pt1 -> neighbor_dis;
-//                pt_tmp -> attribute = pt1 -> attribute;
-//                pt_tmp -> sub_attribute = pt1 -> sub_attribute;
-//                pt_tmp -> prev = pt1-> prev;
                 memcpy(pt_tmp, pt1, sizeof(alv_Point3f));
             }
 
@@ -702,10 +681,7 @@ bool ALV_DATA::setup()
 
 void ALV_DATA::cleanup()
 {
-    /*
-    memset(lidar16_pointcloud_L, 0, sizeof(alv_Point3f)*VLP16_BEAM_NUM*VLP16_BEAM_POINTSIZE);
-    memset(lidar16_pointcloud_R, 0, sizeof(alv_Point3f)*VLP16_BEAM_NUM*VLP16_BEAM_POINTSIZE);
-    */
+
     memset(lidar32_pointcloud, 0, sizeof(alv_Point3f)*HDL32_BEAM_NUM*HDL32_BEAM_POINTSIZE);
     memset(lidar32_pointcloud_beam, 0, sizeof(alv_Point3f)*HDL32_BEAM_NUM*HDL32_BEAM_POINTSIZE);
     memset(max_lidar32_pointcloud, 0, sizeof(alv_Point3f)*HDL32_BEAM_NUM*HDL32_BEAM_POINTSIZE);
@@ -717,15 +693,7 @@ void ALV_DATA::cleanup()
     memset(diff_dis_max_mm, 0, sizeof(float)*ANGLE_NUM*HDL32_BEAM_NUM);
     memset(beam_dis_ave_mm, 0, sizeof(float)*ANGLE_NUM*HDL32_BEAM_NUM);
     memset(beam_dis_max_mm, 0, sizeof(float)*ANGLE_NUM*HDL32_BEAM_NUM);
-    /*
-    memset(lidar4_Data, 0, sizeof(LIDAR4_DATA));
-    memset(lidar4_pointcloud, 0, sizeof(alv_Point3f)*LIDAR4_BEAM_NUM*LIDAR4_BEAM_POINTSIZE);
-    for(int i=0; i<GRIDMAP_HEIGHT; i++)
-        memset(lidar1_grids[i], 0, sizeof(unsigned char)*GRIDMAP_WIDTH);
 
-    memset(para_table.lidar16_inpara_L.beam_point_num, 0, sizeof(int)*VLP16_BEAM_NUM);
-    memset(para_table.lidar16_inpara_R.beam_point_num, 0, sizeof(int)*VLP16_BEAM_NUM);
-    */
     grid_map.cleanup();
     for(int i=0; i<para_table.grid_rows; i++)
     {
@@ -916,47 +884,6 @@ void ALV_DATA::show_result(){
 
 
 
-/*
-    for(int i=0; i<80; i+=2){
-        for(int j=0; j<80; j+=2){
-            for(int k=2*i; k<2*i+2; k++)
-                for(int w=2*j; w<2*j+2; w++){
-                    if(output_img.at<Vec3b>(k, w)==Vec3b(0,0,0) ||
-                            output_img.at<Vec3b>(k, w)==Vec3b(100,50,50) ||
-                            output_img.at<Vec3b>(k, w)==Vec3b(255,255,255)||
-                            output_img.at<Vec3b>(k, w)==Vec3b(255,0,255))
-                        cnt[3]++;
-                    else if(output_img.at<Vec3b>(k, w)==Vec3b(0,0,255) ||
-                            output_img.at<Vec3b>(k, w)==Vec3b(0,255,0))
-                        cnt[1]++;
-                    else if(output_img.at<Vec3b>(k, w)==Vec3b(255,255,0))
-                        cnt[2]++;
-                    else if(output_img.at<Vec3b>(k, w)==Vec3b(50,50,50))
-                        cnt[4]++;
-                    else if(output_img.at<Vec3b>(k, w)==Vec3b(255,0,0))
-                        cnt[0]++;
-            }
-
-            if(cnt[1]>=1)
-                // pos
-                local_map.at<uchar>(i, j) = 1*60;
-            else if(cnt[2]>=1){
-                // neg
-                local_map.at<uchar>(i, j) = 0*60;
-            }
-            else if(cnt[4]>=1)
-                // water
-                local_map.at<uchar>(i, j) = 4*60;
-            else if(cnt[0]>=2)
-                // unknown
-                local_map.at<uchar>(i, j) = 2*60;
-            else local_map.at<uchar>(i, j) = 3*80; // traversable
-            cnt[0] = cnt[1] = cnt[2] = cnt[3] = cnt[4] = 0;
-        }
-    }
-    */
-
-
     int offset = para_table.car_length/2;
     // 5 m
 //    line(result, Point(0,para_table.grid_center_row+(offset+500)/para_table.grid_size), Point(Cols-1,para_table.grid_center_row+(offset+500)/para_table.grid_size), Scalar(150,150,150), 1, 4);
@@ -1116,9 +1043,6 @@ void ALV_DATA::save_32pt_txt(const std::string &filename)
         {
             if(lidar32_pointcloud[beam][angle].valid)
             {
-//                fileout << lidar32_pointcloud[beam][angle].x << "\t\t"<<
-//                           lidar32_pointcloud[beam][angle].y << "\t\t"<<
-//                           lidar32_pointcloud[beam][angle].z << endl;
                 fileout << lidar32_pointcloud[beam][angle].x << "\t\t"<<
                            lidar32_pointcloud[beam][angle].y << "\t\t"<<
                            lidar32_pointcloud[beam][angle].z << endl;

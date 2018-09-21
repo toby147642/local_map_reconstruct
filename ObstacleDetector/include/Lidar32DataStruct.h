@@ -1,5 +1,5 @@
-/* Created  :   Linhui
- * Date     :   2016-08-05
+/* Created  :   Ye Yuwen
+ * Date     :   2018-09-21
  * Usage    :   Some data structure that is needed to parse HDL32 lidar data
 */
 #ifndef LIDAR32DATASTRUCT_H

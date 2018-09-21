@@ -12,16 +12,11 @@ OBJECTS_DIR = ./
 
 SOURCES += \
     kernel/detect_positive_obstacle.cpp \
-#    kernel/detect_negative_obstacle.cpp \
     kernel/negativeobstacle.cpp \
-    framework/ObstacleDetector.cpp \
     framework/ObstacleDetectorLoopmain.cpp \
     framework/alv_data.cpp
 
-
-
 INCLUDEPATH += \
-    ../message \
     include \
     kernel \
     framework
@@ -34,7 +29,6 @@ LIBS += \
 HEADERS += \
     include/alv_data.h \
     include/program.h \
-    include/Lidar16DataStruct.h \
     include/Lidar32DataStruct.h \
     include/detect_positive_obstacle.h \
     include/negativeobstacle.h

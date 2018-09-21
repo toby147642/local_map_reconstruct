@@ -1,5 +1,5 @@
-/* Created  :   Linhui
- * Date     :   2016-05-17
+/* Created  :   Ye Yuwen
+ * Date     :   2018-09-21
  * Usage    :   Declaration of ALV_DATA class, which deals with data parsing
  *              and data cleanup operation.
 */
@@ -7,9 +7,6 @@
 #define ALV_DATA_H
 
 #include "Lidar32DataStruct.h"
-//#include "Lidar16DataStruct.h"
-//#include "lidar4Datastruct.h"
-//#include "Lidar1_Datan.h"
 #include "program.h"
 #include <vector>
 #include <string>
@@ -141,19 +138,6 @@ struct POLAR_TABLE
         delete[] table;
         delete[] angle_grid_num;
     }
-
-
-//    // Important!!!包含有指针成员的类，一定要定义其拷贝构造函数，否则形参析构会把实参的内存也释放掉！！！
-//    POLAR_TABLE(const POLAR_TABLE& other)
-//    {
-//        std::cout<<"polar table = overide"<<std::endl;
-//        for(int i=0; i<POLAR_ANGLE_NUM; i++)
-//        {
-//            for(int j=0; j<ANGLE_GRID_NUM; j++)
-//                table[i][j] = other.table[i][j];
-//            angle_grid_num[i] = other.angle_grid_num[i];
-//        }
-//    }
 
     PIXEL **table;
     int *angle_grid_num;
