@@ -609,6 +609,7 @@ void POSITIVE_DETECTOR::detect_obstacle_grid(ALV_DATA *alv_data)
 {
     mark_car_area(alv_data);
     update_grids(alv_data, (const alv_Point3f**)alv_data->lidar32_pointcloud, HDL32_BEAM_NUM, HDL32_BEAM_POINTSIZE);
+//    ground_estimate(alv_data);
 
     GRID **grids = alv_data->grid_map.grids;
     int Rows = alv_data->para_table.grid_rows;
@@ -678,6 +679,42 @@ void POSITIVE_DETECTOR::detect_water_surface(ALV_DATA *alv_data)
             }
             if(neighbor < 3)
                 grids[row][col].attribute = GRID_TRAVESABLE;
+        }
+    }
+}
+
+void POSITIVE_DETECTOR::ground_estimate(ALV_DATA *alv_data){
+//    const PARA_TABLE &para = alv_data->para_table;
+    GRID **grids = alv_data->grid_map.grids;
+    int Rows = alv_data->para_table.grid_rows;
+    int Cols = alv_data->para_table.grid_cols;
+    for(int row = 0; row<Rows; row++)
+    {
+        for(int col = 0; col<Cols; col++)
+        {
+            if(grids[row][col].min_height > grd_height_ths) // update ground
+            {
+                grids[row][col].ground_height = 0;
+                int cnt = 0;
+                // if the neighbor is available ??
+                for(int r = row-1; r<=row+1; r++){
+                    for(int c = col-1; c<=col+1; c++){
+                        if(r >= Rows || r < 0 || c>=Cols || c<0)
+                            continue;
+                        if(grids[r][c].min_height<grd_height_ths){
+                            cnt ++;
+                            grids[row][col].ground_height+=grids[r][c].min_height;
+                        }
+                    }
+                }
+                if(cnt)
+                    grids[row][col].ground_height/=cnt;
+                else
+                    grids[row][col].ground_height = 0;
+            }
+            else{
+                grids[row][col].ground_height = grids[row][col].min_height;
+            }
         }
     }
 }

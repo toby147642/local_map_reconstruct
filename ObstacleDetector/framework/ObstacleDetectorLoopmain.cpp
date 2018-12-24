@@ -135,9 +135,9 @@ int main()
     }
 
     // read file name index
-    string base_dir = "/home/yyw/dataSet_0809";
-    string folder = "0809_1640"; // 0809_1524 0809_1536/ 0809_1538/ 0809_1551 0809_1618 0809_1640/ 0809_1641/ 0809_1645/ 0913_0000
-    string HDL32Dir = base_dir+"/LIDAR32_DATA/"+folder;
+    string base_dir = "/home/yyw/data_test_12_13";
+    string folder = "suspend"; // negative_obstacle water positive_obstacle suspend
+    string HDL32Dir = base_dir+"/lidar_bin/"+folder;
     DIR *dir;
     struct dirent *ptr;
     vector<string> frameNo;
@@ -185,7 +185,7 @@ int main()
         string imgfliename;
 
 #ifndef TEST_DATA
-        ss << base_dir << "/LIDAR32_DATA/" << folder << "/Lidar_"<<frameNo[i]<<".bin";
+        ss << base_dir << "/lidar_bin/" << folder << "/Lidar_"<<frameNo[i]<<".bin";
 #else
         ss << base_dir << "/LIDAR32_DATA/" << folder << "/"<<frameNo[i]<<".bin";
 #endif
@@ -193,10 +193,11 @@ int main()
         ss.str("");
         ss.clear();
 
-        ss << base_dir << "/IMG_DATA/" << folder << "/" << "ImgColor_" <<frameNo[i]<<".jpg";
+        ss << base_dir << "/image/" << folder << "/" << "ImgColor_" <<frameNo[i]<<".jpg";
         ss >> imgfliename;
         ss.str("");
         ss.clear();
+        string label_filename = frameNo[i] + ".txt";
 
         alv_data->parse_32data_offline(lidar32filename);    //loading 32 lidar data
 
@@ -221,7 +222,12 @@ int main()
         ss >> lidar32asc;
         alv_data->save_32pt_txt_dis_cnt_beam(lidar32asc);
 #endif
+        alv_data->read_label(label_filename);
         alv_data->show_result();
+        alv_data->show_label();
+
+//        cout << alv_data->rect_3.x <<" "<< alv_data->rect_3.y <<" "<<alv_data->rect_2.x <<" "<< alv_data->rect_2.y <<" "<<alv_data->rect_1.x <<" "<< alv_data->rect_1.y;
+        waitKey(-1);
 
         // timer wait
         gettimeofday(&t_end, NULL);
@@ -239,7 +245,6 @@ int main()
         }
         cout << frameNo[i] <<endl;
     }
-
     // free memory
     delete alv_data;
     return 0;

@@ -12,9 +12,12 @@
 #include <string>
 #include <cmath>
 #include <opencv/cv.h>
+#include <opencv2/opencv.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <algorithm>
+using namespace std;
+using namespace cv;
 
 /* alv data structure, which contians:
  *  1.  point cloud: one frame consists of 16 beams, in Strongest or Last mode
@@ -347,8 +350,21 @@ public:
     cv::Mat local_map;
     int cnt_frame = 0;
 
+    // label
+    void read_label(const std::string filename);
+    static void onMouse(int event, int x, int y, int flags, void *param);
+    void on_Mouse(int events, int x, int y);
+    void Initial();
+    void show_label();
+
 protected:
     cv::Mat result;
+    // label picture
+    cv::Mat result_label;
+    cv::Mat result_label_larger;
+    Point rect_0, rect_1, rect_2, rect_3;
+    int point_cnt = 0;
+
 
 };
 

@@ -10,6 +10,7 @@
 
 static const int WATER_GRID_THRESHOLD = 60;
 static const float POS_PRECENT = 0.3;
+static const int grd_height_ths = 25;
 
 
 class POSITIVE_DETECTOR
@@ -31,6 +32,7 @@ public:
     void filt_dangerous(ALV_DATA *alv_data);
     void retrieve_pos(ALV_DATA *alv_data);
     void classify_shadow_grid(ALV_DATA *alv_data);
+    void ground_estimate(ALV_DATA *alv_data);
 
 private:
     POSITIVE_DETECTOR();

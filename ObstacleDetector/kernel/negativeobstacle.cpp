@@ -635,7 +635,6 @@ void negativeObstacle::neg_complete(ALV_DATA *alv_data){
     GRID **grids = alv_data->grid_map.grids;
     int Rows = alv_data->para_table.grid_rows;
     int Cols = alv_data->para_table.grid_cols;
-
     int win = 3;
 
     for(int row = win; row < Rows-win;  row++){
@@ -643,17 +642,21 @@ void negativeObstacle::neg_complete(ALV_DATA *alv_data){
 
             if(grids[row][col].attribute != GRID_NEG_OBS)
                 continue;
-
+            float dis = pow(row-59, 2)+pow(col-79, 2);
+            win = (int)(sqrt(dis) *abs(grids[row][col].min_height)/(abs(grids[row][col].min_height)+alv_data->para_table.lidar32_expara.T[2]))*1.5;
+            // smaller of negative
+            win /= 2;
             if(row == 59){
                 for(int j = col-1; j>=col-win; j--){
                     if(
-                            grids[row][j].attribute == GRID_UNKNOWN ||
+                            (grids[row][j].attribute == GRID_UNKNOWN ||
                             !grids[row][j].known ||
                             grids[row][j].attribute == GRID_TRAVESABLE ||
                             grids[row][j].attribute == GRID_SUSPEND_OBS ||
                             grids[row][j].attribute == GRID_CANDIDAT_NEG ||
                             grids[row][j].attribute == GRID_ROAD_EDGE  ||
-                            grids[row][j].attribute == GRID_SHADOW
+                            grids[row][j].attribute == GRID_SHADOW) &&
+                            pow(j-79, 2) <= pow(col-79, 2)
                             )
                         grids[row][j].attribute = GRID_FALLING_NEG_EDGE;
                 }
@@ -666,7 +669,8 @@ void negativeObstacle::neg_complete(ALV_DATA *alv_data){
                             grids[j][col].attribute == GRID_SUSPEND_OBS ||
                             grids[j][col].attribute == GRID_CANDIDAT_NEG ||
                             grids[j][col].attribute == GRID_ROAD_EDGE  ||
-                            grids[j][col].attribute == GRID_SHADOW
+                            grids[j][col].attribute == GRID_SHADOW &&
+                            pow(j-59, 2) <= pow(row-59, 2)
                             )
                         grids[j][col].attribute = GRID_FALLING_NEG_EDGE;
                 }
@@ -679,16 +683,30 @@ void negativeObstacle::neg_complete(ALV_DATA *alv_data){
                             grids[j][col].attribute == GRID_SUSPEND_OBS ||
                             grids[j][col].attribute == GRID_CANDIDAT_NEG ||
                             grids[j][col].attribute == GRID_ROAD_EDGE  ||
-                            grids[j][col].attribute == GRID_SHADOW
+                            grids[j][col].attribute == GRID_SHADOW &&
+                            pow(j-59, 2) <= pow(row-59, 2)
                             )
                         grids[j][col].attribute = GRID_FALLING_NEG_EDGE;
                 }
             }
             else{
+                // ground height retrieve
+//                float grd_hgt = 0;
+//                int grd_cnt = 0;
+//                for(int i=row-win; i<=row+win; i++){
+//                    for(int j=col-win; j<=col+win; j++){
+//                        if(grids[j][col].known && grids[row][col].attribute != GRID_NEG_OBS)
+//                           grd_hgt+=grids.[i][j];
+//                        grd_cnt ++;
+//                    }
+//                }
+//                grd_hgt /=grd_cnt;
+
+
                 // begining
                 for(int i=row-win; i<=row+win; i++){
                     for(int j=col-win; j<=col+win ;j++){
-                        if(i==row && j==col)
+                        if(i==row && j==col /*|| pow(i-59, 2)+pow(j-79,2)>= pow(row-59, 2)+pow(col-79, 2)*/)
                             continue;
                         if(abs(i-59)+abs(j-79) > abs(row-59)+abs(col-79))
                             continue;

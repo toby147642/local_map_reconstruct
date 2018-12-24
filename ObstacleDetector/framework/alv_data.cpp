@@ -90,7 +90,7 @@ PARA_TABLE::PARA_TABLE()
 
 //    para_base_dir = "/home/user/workspace/kyxz2018_G1_zju/src/local_map/parameters";
     // Local version
-    para_base_dir = "/home/yyw/ObstacleDetector_yyw_withoutRCS/parameters";
+    para_base_dir = "/home/yyw/local_map_reconstruct_11/parameters";
 
     grid_size = 0;
     grid_rows = 0;
@@ -564,7 +564,6 @@ bool ALV_DATA::parse_32data_offline(const std::string filename)
     return true;
 }
 
-
 // read from a single configure file line, determine which type the parameter is,
 // and get the value of the parameter
 void ReadConfigLine(const string line, string &flag, int &value)
@@ -651,6 +650,138 @@ bool ALV_DATA::read_alv_config()
 
     return true;
 }
+/*
+ * read label, create label picture
+ */
+void ALV_DATA::read_label(const std::string filename)
+{
+    ifstream infile;
+//    stringstream sline;
+    string line;
+
+    string label_file = para_table.para_base_dir +"/label/suspend"+ filename; // /label/water/   /label/negative/ /label/suspend/
+    infile.open(label_file, ios::in);
+    if(!infile)
+    {
+        cerr<<"***Error: can't open config file \""<<label_file<<"\""<<endl;
+        return;
+    }
+    line.clear();
+    while(getline(infile, line))
+    {
+        if(line.empty())
+            continue;
+        else
+        {
+            string x;
+            float x_float;
+            float y_float;
+            float z_float;
+            stringstream ss(line);
+            ss >> x;
+            if(x=="Car"){
+                for(int m=0; m<4;m++)
+                    ss>>x;
+                ss >> x_float;
+                ss >> y_float;
+                ss >> z_float;
+
+                x_float *= 100;
+                y_float *= 100;
+                z_float *= 100;
+                float pic_cen_x_cm;
+                float pic_cen_y_cm;
+                pic_cen_x_cm = x_float*para_table.lidar32_expara.R[0][0]+y_float*para_table.lidar32_expara.R[0][1]+z_float*para_table.lidar32_expara.R[0][2] + para_table.lidar32_expara.T[0];
+                pic_cen_y_cm = x_float*para_table.lidar32_expara.R[1][0]+y_float*para_table.lidar32_expara.R[1][1]+z_float*para_table.lidar32_expara.R[1][2] + para_table.lidar32_expara.T[1];
+
+                int row = (pic_cen_y_cm + para_table.map_range_rear)/para_table.grid_size;
+                int col = (pic_cen_x_cm + para_table.map_range_left)/para_table.grid_size;
+                if(!(row >= 0 && row < para_table.grid_rows && col >= 0 && col < para_table.grid_cols))
+                    continue;
+                for(int r = row-2; r <=row+2; r++)
+                    for(int c = col-2; c <=col+2; c++)
+                        result_label.at<Vec3b>(r, c) =Vec3b(255, 255, 255);
+
+            }
+            else if(x=="Cart"){
+                cout << "wait" << endl;
+            }else if(x=="Pedestrian"){
+                for(int m=0; m<4;m++)
+                    ss>>x;
+                ss >> x_float;
+                ss >> y_float;
+                ss >> z_float;
+
+                x_float *= 100;
+                y_float *= 100;
+                z_float *= 100;
+                float pic_cen_x_cm;
+                float pic_cen_y_cm;
+                pic_cen_x_cm = x_float*para_table.lidar32_expara.R[0][0]+y_float*para_table.lidar32_expara.R[0][1]+z_float*para_table.lidar32_expara.R[0][2] + para_table.lidar32_expara.T[0];
+                pic_cen_y_cm = x_float*para_table.lidar32_expara.R[1][0]+y_float*para_table.lidar32_expara.R[1][1]+z_float*para_table.lidar32_expara.R[1][2] + para_table.lidar32_expara.T[1];
+
+                int row = (pic_cen_y_cm + para_table.map_range_rear)/para_table.grid_size;
+                int col = (pic_cen_x_cm + para_table.map_range_left)/para_table.grid_size;
+                if(!(row >= 0 && row < para_table.grid_rows && col >= 0 && col < para_table.grid_cols))
+                    continue;
+                for(int r = row-2; r <=row+2; r++)
+                    for(int c = col-2; c <=col+2; c++)
+                        result_label.at<Vec3b>(r, c) =Vec3b(255, 255, 255);
+            }else if(x=="Cyclist"){ // suspend
+                for(int m=0; m<4;m++)
+                    ss>>x;
+                ss >> x_float;
+                ss >> y_float;
+                ss >> z_float;
+
+                x_float *= 100;
+                y_float *= 100;
+                z_float *= 100;
+                float pic_cen_x_cm;
+                float pic_cen_y_cm;
+                pic_cen_x_cm = x_float*para_table.lidar32_expara.R[0][0]+y_float*para_table.lidar32_expara.R[0][1]+z_float*para_table.lidar32_expara.R[0][2] + para_table.lidar32_expara.T[0];
+                pic_cen_y_cm = x_float*para_table.lidar32_expara.R[1][0]+y_float*para_table.lidar32_expara.R[1][1]+z_float*para_table.lidar32_expara.R[1][2] + para_table.lidar32_expara.T[1];
+
+                int row = (pic_cen_y_cm + para_table.map_range_rear)/para_table.grid_size;
+                int col = (pic_cen_x_cm + para_table.map_range_left)/para_table.grid_size;
+                if(!(row >= 0 && row < para_table.grid_rows && col >= 0 && col < para_table.grid_cols))
+                    continue;
+                for(int r = row-4; r <=row+4; r++)
+                    for(int c = col-4; c <=col+4; c++)
+                        result_label.at<Vec3b>(r, c) =Vec3b(255,255,255);
+            }
+
+            // to be continue; {}
+
+            // pos, water, suspend
+
+
+//            x_float *= 100;
+//            y_float *= 100;
+//            z_float *= 100;
+//            float pic_cen_x_cm;
+//            float pic_cen_y_cm;
+//            pic_cen_x_cm = x_float*para_table.lidar32_expara.R[0][0]+y_float*para_table.lidar32_expara.R[0][1]+z_float*para_table.lidar32_expara.R[0][2] + para_table.lidar32_expara.T[0];
+//            pic_cen_y_cm = x_float*para_table.lidar32_expara.R[1][0]+y_float*para_table.lidar32_expara.R[1][1]+z_float*para_table.lidar32_expara.R[1][2] + para_table.lidar32_expara.T[1];
+
+//            int row = (pic_cen_y_cm + para_table.map_range_rear)/para_table.grid_size;
+//            int col = (pic_cen_x_cm + para_table.map_range_left)/para_table.grid_size;
+//            if(!(row >= 0 && row < para_table.grid_rows && col >= 0 && col < para_table.grid_cols))
+//                continue;
+//            for(int r = row-1; r <=row+1; r++)
+//                for(int c = col-1; c <=col+1; c++)
+//                    result_label.at<Vec3b>(r, c) =Vec3b(255, 255, 255);
+        }
+        line.clear();
+    }
+    infile.close();
+
+    para_table.grid_center_row = para_table.map_range_rear / para_table.grid_size;
+    para_table.grid_center_col = para_table.map_range_left / para_table.grid_size;
+
+    return;
+}
+
 
 bool ALV_DATA::setup()
 {
@@ -671,8 +802,10 @@ bool ALV_DATA::setup()
     //end
 
     cv::Mat color_map = cv::Mat::zeros(para_table.grid_rows, para_table.grid_cols, CV_8UC3);
+    cv::Mat color_map_label = cv::Mat::zeros(para_table.grid_rows, para_table.grid_cols, CV_8UC3);
     cv::Mat out_put = cv::Mat::zeros(80, 80, CV_8UC1);
     result = color_map;
+    result_label = color_map_label;
     local_map = out_put;
 
     init_lookup_table();
@@ -715,8 +848,10 @@ void ALV_DATA::cleanup()
     int Rows = para_table.grid_rows;
     int Cols = para_table.grid_cols;
     for(int row = 0; row < Rows; row++)
-        for(int col = 0; col < Cols; col++)
+        for(int col = 0; col < Cols; col++){
           result.at<Vec3b>(row, col) = Vec3b(0,0,0);      	// BGR, 黑
+          result_label.at<Vec3b>(row, col) = Vec3b(0,0,0);      	// BGR, 黑
+        }
 }
 
 void ALV_DATA::show_result(){
@@ -742,31 +877,83 @@ void ALV_DATA::show_result(){
                 result.at<Vec3b>(row, col) = Vec3b(0,0,0);      	// BGR, 黑
                 re2.at<uchar>(row,col) = 0;
             }
-            else if(grids[row][col].attribute == GRID_CAR_AREA)
+            else if(grids[row][col].attribute == GRID_CAR_AREA){
                 result.at<Vec3b>(row, col) = Vec3b(255,255,255);   	// 白
+                if(result_label.at<Vec3b>(row, col) != Vec3b(0,0,0))
+                    continue;
+                else result_label.at<Vec3b>(row, col) = Vec3b(255,255,255);
+            }
             else if(grids[row][col].attribute == GRID_TRAVESABLE ||
                     grids[row][col].attribute == GRID_CANDIDAT_NEG ||
-                    grids[row][col].attribute == GRID_SHADOW/* || grids[row][col].attribute == GRID_ESTIMATED_GROUND*/)
+                    grids[row][col].attribute == GRID_SHADOW/* || grids[row][col].attribute == GRID_ESTIMATED_GROUND*/){
                 result.at<Vec3b>(row, col) = Vec3b(100,50,50);   	// 灰
-            else if(grids[row][col].attribute == GRID_POS_OBS || grids[row][col].attribute == GRID_RETRIEVED_POS)
+                if(result_label.at<Vec3b>(row, col) != Vec3b(0,0,0))
+                    continue;
+                else result_label.at<Vec3b>(row, col) = Vec3b(100,50,50);
+            }
+            else if(grids[row][col].attribute == GRID_POS_OBS || grids[row][col].attribute == GRID_RETRIEVED_POS){
                 result.at<Vec3b>(row, col) = Vec3b(0,0,255);     	// 红
-            else if(grids[row][col].attribute == GRID_NEG_OBS)
+                if(result_label.at<Vec3b>(row, col) != Vec3b(0,0,0))
+                    continue;
+                else result_label.at<Vec3b>(row, col) = Vec3b(0,0,255);
+            }
+
+            else if(grids[row][col].attribute == GRID_NEG_OBS){
                 result.at<Vec3b>(row, col) = Vec3b(255,255,0);  	// 浅蓝
-            else if(grids[row][col].attribute == GRID_RISING_NEG_EDGE)
+                if(result_label.at<Vec3b>(row, col) != Vec3b(0,0,0))
+                    continue;
+                else result_label.at<Vec3b>(row, col) = Vec3b(255,255,0);
+            }
+
+            else if(grids[row][col].attribute == GRID_RISING_NEG_EDGE){
                 result.at<Vec3b>(row, col) = Vec3b(255,255,0);
-            else if(grids[row][col].attribute == GRID_FALLING_NEG_EDGE)
+                if(result_label.at<Vec3b>(row, col) != Vec3b(0,0,0))
+                    continue;
+                else result_label.at<Vec3b>(row, col) = Vec3b(255,255,0);
+            }
+
+            else if(grids[row][col].attribute == GRID_FALLING_NEG_EDGE){
                 result.at<Vec3b>(row, col) = Vec3b(255,255,0);
-            else if(grids[row][col].attribute == GRID_DANGEROUS)
+                if(result_label.at<Vec3b>(row, col) != Vec3b(0,0,0))
+                    continue;
+                else result_label.at<Vec3b>(row, col) = Vec3b(255,255,0);
+            }
+
+            else if(grids[row][col].attribute == GRID_DANGEROUS){
 //                result.at<Vec3b>(row, col) = Vec3b(0,255,255);  	// 黄
                 result.at<Vec3b>(row, col) = Vec3b(50,50,50); 	// 灰
-            else if(grids[row][col].attribute == GRID_ROAD_EDGE)
+                if(result_label.at<Vec3b>(row, col) != Vec3b(0,0,0))
+                    continue;
+                else result_label.at<Vec3b>(row, col) = Vec3b(50,50,50);
+            }
+
+            else if(grids[row][col].attribute == GRID_ROAD_EDGE){
                 result.at<Vec3b>(row, col) = Vec3b(255,0,255);  	// 紫
-            else if(grids[row][col].attribute == GRID_OCCULUSION)
+                if(result_label.at<Vec3b>(row, col) != Vec3b(0,0,0))
+                    continue;
+                else result_label.at<Vec3b>(row, col) = Vec3b(255,0,255);
+            }
+
+            else if(grids[row][col].attribute == GRID_OCCULUSION){
                 result.at<Vec3b>(row, col) = Vec3b(255,0,0);  		// 蓝
-            else if(grids[row][col].attribute == GRID_WATER)
+                if(result_label.at<Vec3b>(row, col) != Vec3b(0,0,0))
+                    continue;
+                else result_label.at<Vec3b>(row, col) = Vec3b(255,0,0);
+            }
+
+            else if(grids[row][col].attribute == GRID_WATER){
                 result.at<Vec3b>(row, col) = Vec3b(50,50,50); 	// 灰
-            else if(grids[row][col].attribute == GRID_SUSPEND_OBS)
-                result.at<Vec3b>(row, col) = Vec3b(0,0,255);    	// 绿 0 255 0
+                if(result_label.at<Vec3b>(row, col) != Vec3b(0,0,0))
+                    continue;
+                else result_label.at<Vec3b>(row, col) = Vec3b(50,50,50);
+            }
+
+            else if(grids[row][col].attribute == GRID_SUSPEND_OBS){
+                result.at<Vec3b>(row, col) = Vec3b(0,255,0);    	// 绿 0 255 0
+                if(result_label.at<Vec3b>(row, col) != Vec3b(0,0,0))
+                    continue;
+                else result_label.at<Vec3b>(row, col) = Vec3b(0,255,0);
+            }
         }
     }
     for(int i=0;i<160;i++){
@@ -886,44 +1073,73 @@ void ALV_DATA::show_result(){
 
     int offset = para_table.car_length/2;
     // 5 m
-//    line(result, Point(0,para_table.grid_center_row+(offset+500)/para_table.grid_size), Point(Cols-1,para_table.grid_center_row+(offset+500)/para_table.grid_size), Scalar(150,150,150), 1, 4);
+//    line(result_label, Point(0,para_table.grid_center_row+(offset+500)/para_table.grid_size), Point(Cols-1,para_table.grid_center_row+(offset+500)/para_table.grid_size), Scalar(150,150,150), 1, 4);
 //    // 10 m
-//    line(result, Point(0,para_table.grid_center_row+(offset+1000)/para_table.grid_size), Point(Cols-1,para_table.grid_center_row+(offset+1000)/para_table.grid_size), Scalar(150,150,150), 1, 4);
+//    line(result_label, Point(0,para_table.grid_center_row+(offset+1000)/para_table.grid_size), Point(Cols-1,para_table.grid_center_row+(offset+1000)/para_table.grid_size), Scalar(150,150,150), 1, 4);
 //    // 15 m
-//    line(result, Point(0,para_table.grid_center_row+(offset+1500)/para_table.grid_size), Point(Cols-1,para_table.grid_center_row+(offset+1500)/para_table.grid_size), Scalar(150,150,150), 1, 4);
+//    line(result_label, Point(0,para_table.grid_center_row+(offset+1500)/para_table.grid_size), Point(Cols-1,para_table.grid_center_row+(offset+1500)/para_table.grid_size), Scalar(150,150,150), 1, 4);
 //    // 20 m
-//    line(result, Point(0,para_table.grid_center_row+(offset+2000)/para_table.grid_size), Point(Cols-1,para_table.grid_center_row+(offset+2000)/para_table.grid_size), Scalar(150,150,150), 1, 4);
+//    line(result_label, Point(0,para_table.grid_center_row+(offset+2000)/para_table.grid_size), Point(Cols-1,para_table.grid_center_row+(offset+2000)/para_table.grid_size), Scalar(150,150,150), 1, 4);
 
-//    line(result, Point(0, 128), Point(Cols-1, 128), Scalar(100,100,100), 1);
-//    line(result, Point(100,0), Point(100,Rows-1), Scalar(100,100,100), 1);
+//    line(result_label, Point(0, 128), Point(Cols-1, 128), Scalar(100,100,100), 1);
+//    line(result_label, Point(100,0), Point(100,Rows-1), Scalar(100,100,100), 1);
 
     int MatHight = para_table.grid_rows - 1;
     flip(result, result, 0);
-//    putText(result, "5m", Point(0, MatHight-(para_table.grid_center_row+(offset+500)/para_table.grid_size)),
+    flip(result_label, result_label, 0);
+//    putText(result_label, "5m", Point(0, MatHight-(para_table.grid_center_row+(offset+500)/para_table.grid_size)),
 //            cv::FONT_HERSHEY_COMPLEX, 0.5, Scalar(250,250,250));
-//    putText(result, "10m", Point(0, MatHight-(para_table.grid_center_row+(offset+1000)/para_table.grid_size)),
+//    putText(result_label, "10m", Point(0, MatHight-(para_table.grid_center_row+(offset+1000)/para_table.grid_size)),
 //            cv::FONT_HERSHEY_COMPLEX, 0.5, Scalar(250,250,250));
-//    putText(result, "15m", Point(0, MatHight-(para_table.grid_center_row+(offset+1500)/para_table.grid_size)),
+//    putText(result_label, "15m", Point(0, MatHight-(para_table.grid_center_row+(offset+1500)/para_table.grid_size)),
 //            cv::FONT_HERSHEY_COMPLEX, 0.5, Scalar(250,250,250));
-//    putText(result, "20m", Point(0, MatHight-(para_table.grid_center_row+(offset+2000)/para_table.grid_size)),
+//    putText(result_label, "20m", Point(0, MatHight-(para_table.grid_center_row+(offset+2000)/para_table.grid_size)),
 //            cv::FONT_HERSHEY_COMPLEX, 0.5, Scalar(250,250,250));
 
     cv::Size dsize = cv::Size(2*Cols, 2*Rows);
     Mat dresult = Mat::zeros(dsize, CV_8UC3);
     resize(result, dresult, dsize, INTER_NEAREST);
-    //imshow("result", dresult);
+    imshow("result", dresult);
+
+    Mat dresult_label = Mat::zeros(dsize, CV_8UC3);
+    resize(result_label, dresult_label, dsize, INTER_NEAREST);
+    imshow("result_label_hand",dresult_label);
+    result_label_larger = dresult;
+    imshow("result_label", result_label_larger);
+//    setMouseCallback("result_label", onMouse, reinterpret_cast<void *>(&dresult_label));
+//    setMouseCallback("result_label", onMouse,&dresult_label);
+    Initial();
+//    for(int i=0; i<4;i++){
+//        if(i==0){
+//            rect_3.x = rect_0.x;
+//            rect_3.x = rect_0.x;
+//        }
+//        else if(i==1){
+//            rect_2.x = rect_0.x;
+//            rect_2.y = rect_0.y;
+//        }
+//        else if(i==2){
+//            rect_1.x = rect_0.x;
+//            rect_1.y = rect_0.y;
+//        }
+//    }
+
+    cout << endl;
+    cout << "check the point " << endl;
+    cout << rect_3.x <<" "<< rect_3.y <<" "<<rect_2.x <<" "<< rect_2.y <<" "<<rect_1.x <<" "<< rect_1.y <<endl;
+
+
 
     cv::Size dsize2 = cv::Size(2*160, 2*160);
     Mat dresult2 = Mat::zeros(dsize2, CV_8UC3);
     resize(output_img, dresult2, dsize2, INTER_NEAREST);
     imshow("output_img", dresult2);
-
     flip(local_map, local_map, 0);
     Mat dresult3 = Mat::zeros(dsize2, CV_8UC1);
     resize(local_map, dresult3, dsize2, INTER_NEAREST);
     imshow("local_map", dresult3);
 
-    cv::waitKey(1);
+//    cv::waitKey(1);
 
     // cv::imwrite(string("/home/user/img/")+std::to_string(cnt_frame)+".jpg", output_img);
     // cnt_frame++;
@@ -1123,4 +1339,76 @@ void ALV_DATA::save_grid_map(const std::string &filename)
                   <<grid_map.grids[row][col].dis_height<<"\t"
                   <<grid_map.grids[row][col].dis_height<<endl;
     fileout.close();
+}
+
+//void ALV_DATA::onMouse(int event, int x, int y, int flags, void *param){
+//    Mat *im = reinterpret_cast<Mat*>(param);
+//    switch (event)   //调度事件
+//    {
+//        case EVENT_LBUTTONDOWN:  //鼠标左键按下事件
+//    //显示像素值
+//        cout << "at(" << x << "," << y << ") value is:" << static_cast<int>(im->at<uchar>(Point(x, y))) << endl;
+//    //使用Mat对象的at方法来获取(x,y)的像素值
+//        break;
+//    //鼠标函数还可能收到的事件有：EVENT_MOUSEMOVE,EVENT_LBUTTONUP,EVENT_RBUTTONDOWN,EVENT_RBUTTONUP
+//    }
+//}
+
+void ALV_DATA::onMouse(int events, int x, int y, int, void* userdata)
+{
+    // Check for null pointer in userdata and handle the error
+    ALV_DATA* temp = reinterpret_cast<ALV_DATA*>(userdata);
+    temp->on_Mouse(events, x, y);
+}
+
+void ALV_DATA::on_Mouse(int events, int x, int y)
+{
+    switch (events)
+    {
+    case CV_EVENT_LBUTTONDOWN:
+        cout << "at(" << x << "," << y << ") value is:" << static_cast<int>(result_label_larger.at<uchar>(Point(x, y))) << endl;
+        if( point_cnt==0 ){
+            rect_0.x = x;
+            rect_0.y = y;
+            point_cnt++;
+        }else if(point_cnt ==1){
+            rect_1.x = x;
+            rect_1.y = y;
+            point_cnt++;
+        }else if(point_cnt ==2){
+            rect_2.x = x;
+            rect_2.y = y;
+            point_cnt++;
+        }else if(point_cnt ==3){
+            rect_3.x = x;
+            rect_3.y = y;
+            point_cnt=0;
+        }
+        //your code here
+        break;
+    case CV_EVENT_MOUSEMOVE:
+        //your code here
+        break;
+    case CV_EVENT_LBUTTONUP:
+        //your code here
+        break;
+    }
+}
+
+void ALV_DATA::Initial(){
+    setMouseCallback("result", ALV_DATA::onMouse, this);
+}
+
+void ALV_DATA::show_label(){
+    std::vector<cv::Point > contour;
+    contour.reserve(4);
+    contour.push_back(rect_0);
+    contour.push_back(rect_1);
+    contour.push_back(rect_2);
+    contour.push_back(rect_3);
+    std::vector<std::vector<cv::Point >> contours;
+    contours.push_back(contour);
+    polylines(result_label_larger, contours, true, cv::Scalar(255, 255, 255));
+    fillPoly(result_label_larger, contours, cv::Scalar(255, 255, 255));
+    imshow("my_label", result_label_larger);
 }
